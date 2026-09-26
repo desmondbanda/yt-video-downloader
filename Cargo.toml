@@ -1,0 +1,15 @@
+[package]
+name = "yt-video-downloader"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1.0.104"
+clap = { version = "4.6.7", features = ["derive", "env"] }
+indicatif = "0.18.6"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+
+[[bin]]
+name = "ytd"
+path = "src/main.rs"
