@@ -60,6 +60,22 @@ Interrupted downloads can normally resume when you repeat the same command with 
 
 ## Maintenance and development
 
+If YouTube says “Sign in to confirm you’re not a bot”, open the video in your
+browser, sign in and complete any verification, then use that browser's cookies:
+
+```sh
+ytd info 'https://www.youtube.com/watch?v=VIDEO_ID' --cookies-from-browser chrome
+ytd get 'https://www.youtube.com/watch?v=VIDEO_ID' -q 720 --cookies-from-browser chrome
+```
+
+Replace `chrome` with the browser you use, such as `firefox` or `safari`.
+Alternatively, pass `--cookies '/path/to/cookies.txt'` for a Netscape-format cookie
+file. Choose one cookie option. Cookies are only passed to `info` and `get`;
+browser cookies are never read automatically. Authentication may help but does
+not guarantee YouTube will accept the request. Keep cookie files private.
+After updating this app's source, reinstall it with the command below to enable
+these options in the installed `ytd`.
+
 `ytd update` uses yt-dlp's self-updater and falls back to Homebrew when yt-dlp identifies a Homebrew installation. Python installations get instructions to update in their original environment. To update the Homebrew tools together:
 
 ```sh

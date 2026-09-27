@@ -13,6 +13,8 @@ const FILE_PREFIX: &str = "@@F ";
 
 pub struct Engine {
     bin: PathBuf,
+    cookies_from_browser: Option<String>,
+    cookies: Option<PathBuf>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -57,7 +59,7 @@ impl Format {
 
 /// Formats yt-dlp would realistically pick: those with a reported size
 /// (the https ones), falling back to all of them if none report one.
-fn sized_first<'a>(formats: Vec<&'a Format>) -> Vec<&'a Format> {
+fn sized_first(formats: Vec<&Format>) -> Vec<&Format> {
     let sized: Vec<_> = formats
         .iter()
         .copied()
@@ -156,7 +158,28 @@ pub enum Event {
 
 impl Engine {
     pub fn new(bin: impl Into<PathBuf>) -> Self {
-        Self { bin: bin.into() }
+        Self {
+            bin: bin.into(),
+            cookies_from_browser: None,
+            cookies: None,
+        }
+    }
+
+    pub fn with_cookies(mut self, browser: Option<String>, file: Option<PathBuf>) -> Self {
+        self.cookies_from_browser = browser;
+        self.cookies = file;
+        self
+    }
+
+    fn media_command(&self) -> Command {
+        let mut command = self.command();
+        if let Some(browser) = &self.cookies_from_browser {
+            command.arg("--cookies-from-browser").arg(browser);
+        }
+        if let Some(file) = &self.cookies {
+            command.arg("--cookies").arg(file);
+        }
+        command
     }
 
     fn command(&self) -> Command {
@@ -187,7 +210,7 @@ impl Engine {
 
     pub fn probe(&self, url: &str) -> Result<VideoInfo> {
         let out = self
-            .command()
+            .media_command()
             .args(["--dump-single-json", "--no-playlist", "--", url])
             .stderr(Stdio::inherit())
             .output()
@@ -199,7 +222,7 @@ impl Engine {
     }
 
     pub fn download(&self, req: &DownloadRequest, mut on_event: impl FnMut(Event)) -> Result<()> {
-        let mut cmd = self.command();
+        let mut cmd = self.media_command();
         cmd.arg(if req.allow_playlist {
             "--yes-playlist"
         } else {

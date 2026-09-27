@@ -7,6 +7,61 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 static NEXT_ID: AtomicUsize = AtomicUsize::new(0);
 
+#[test]
+fn cookie_options_reach_both_media_commands_as_single_arguments() {
+    let fixture = Fixture::new();
+    fixture.executable("ffmpeg", "exit 0");
+    fixture.executable("ffprobe", "exit 0");
+    let engine = fixture.executable(
+        "yt-dlp",
+        r#"
+[ "$1" = '--ignore-config' ] || exit 10
+[ "$2" = "$EXPECTED_FLAG" ] || exit 11
+[ "$3" = "$EXPECTED_VALUE" ] || exit 12
+printf '{"title":"Test","formats":[]}\n'
+"#,
+    );
+    for command in ["info", "get"] {
+        for (flag, value) in [
+            ("--cookies-from-browser", "chrome:Profile 1"),
+            ("--cookies", "/tmp/my cookies.txt"),
+        ] {
+            let mut cmd = Command::new(env!("CARGO_BIN_EXE_ytd"));
+            cmd.env("PATH", &fixture.0)
+                .env("EXPECTED_FLAG", flag)
+                .env("EXPECTED_VALUE", value)
+                .arg("--yt-dlp")
+                .arg(&engine)
+                .args([command, "https://example.com/video", flag, value]);
+            if command == "get" {
+                cmd.arg("-o").arg(fixture.0.join("output"));
+            }
+            let output = cmd.output().unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        }
+    }
+}
+
+#[test]
+fn conflicting_cookie_sources_are_rejected() {
+    let output = Command::new(env!("CARGO_BIN_EXE_ytd"))
+        .args([
+            "info",
+            "https://example.com/video",
+            "--cookies",
+            "cookies.txt",
+            "--cookies-from-browser",
+            "chrome",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+}
+
 struct Fixture(std::path::PathBuf);
 impl Fixture {
     fn new() -> Self {

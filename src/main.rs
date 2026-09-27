@@ -17,6 +17,14 @@ struct Cli {
     #[arg(long, global = true, default_value = "yt-dlp", env = "YTD_YT_DLP")]
     yt_dlp: PathBuf,
 
+    /// Read cookies from a browser, e.g. chrome, firefox, or chrome:PROFILE
+    #[arg(long, global = true, conflicts_with = "cookies")]
+    cookies_from_browser: Option<String>,
+
+    /// Read cookies from a Netscape-format cookie file
+    #[arg(long, global = true)]
+    cookies: Option<PathBuf>,
+
     #[command(subcommand)]
     command: Cmd,
 }
@@ -55,7 +63,7 @@ enum AudioArg {
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
-    let engine = Engine::new(cli.yt_dlp);
+    let engine = Engine::new(cli.yt_dlp).with_cookies(cli.cookies_from_browser, cli.cookies);
 
     match cli.command {
         Cmd::Info { url } => info(&engine, &url),
