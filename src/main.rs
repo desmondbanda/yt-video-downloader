@@ -9,15 +9,52 @@ use indicatif::{HumanBytes, ProgressBar, ProgressStyle};
 
 use engine::{AudioFormat, DownloadRequest, Engine, Event, Quality};
 
+const DOWNLOAD_HELP: &str = "\
+Examples:
+  Download video with audio at up to 720p HD using Chrome cookies:
+    ytd get 'https://www.youtube.com/watch?v=8O0Nt9qY_vo&list=PLqbS7AVVErFiWDOAVrPt7aYmnuuOLYvOa&index=4' -q 720 --cookies-from-browser chrome
+
+  Using Firefox or Safari instead:
+    ytd get 'https://www.youtube.com/watch?v=8O0Nt9qY_vo' -q 720 --cookies-from-browser firefox
+    ytd get 'https://www.youtube.com/watch?v=8O0Nt9qY_vo' -q 720 --cookies-from-browser safari
+
+  Download without browser cookies:
+    ytd get 'https://www.youtube.com/watch?v=8O0Nt9qY_vo' -q 1080
+
+  Check available picture qualities and estimated download sizes:
+    ytd info 'https://www.youtube.com/watch?v=8O0Nt9qY_vo' --cookies-from-browser chrome
+
+  Save audio only as MP3:
+    ytd get 'https://www.youtube.com/watch?v=8O0Nt9qY_vo' -a mp3
+
+  Choose a destination folder:
+    ytd get 'https://www.youtube.com/watch?v=8O0Nt9qY_vo' -q 480 -o './videos'
+
+How the options work:
+  -q, --quality sets the maximum picture height in pixels:
+    360 = 360p, 480 = 480p SD, 720 = 720p HD, 1080 = 1080p Full HD.
+    The default is 720. Lower quality generally uses less data.
+    A lower resolution may be selected if the requested quality is unavailable.
+  Video downloads include audio and are saved as MP4 by default.
+  -a, --audio saves only audio; -q does not apply to audio-only downloads.
+  --cookies-from-browser uses the named browser's session for authentication.
+    If YouTube asks you to sign in, open the video in that browser, sign in,
+    and complete any verification before retrying. Cookies may help but do
+    not guarantee access. Browser cookies are only read when you request them.
+  Files are saved in ~/Downloads/YouTube unless you set -o, --output.
+  A video URL containing &list= still downloads only that video.
+    Add --playlist only when you want every available video in the playlist.
+  Keep URLs in quotes, as shown above, so the shell handles & and ? correctly.";
+
 /// Download YouTube videos (via yt-dlp) so you only pay for the data once.
 #[derive(Parser)]
-#[command(name = "ytd", version)]
+#[command(name = "ytd", version, after_help = DOWNLOAD_HELP)]
 struct Cli {
     /// Path to the yt-dlp binary
     #[arg(long, global = true, default_value = "yt-dlp", env = "YTD_YT_DLP")]
     yt_dlp: PathBuf,
 
-    /// Read cookies from a browser, e.g. chrome, firefox, or chrome:PROFILE
+    /// Use a browser session, e.g. chrome, firefox, safari, or chrome:PROFILE
     #[arg(long, global = true, conflicts_with = "cookies")]
     cookies_from_browser: Option<String>,
 
@@ -32,11 +69,15 @@ struct Cli {
 #[derive(Subcommand)]
 enum Cmd {
     /// Show a video's title and the approximate size at each quality
+    #[command(
+        after_help = "Example:\n  ytd info 'https://www.youtube.com/watch?v=8O0Nt9qY_vo' --cookies-from-browser chrome\n\nShows available picture qualities and rough download sizes without downloading.\nUse the browser where you signed into YouTube; firefox and safari also work."
+    )]
     Info { url: String },
     /// Download a video (or just its audio)
+    #[command(after_help = DOWNLOAD_HELP)]
     Get {
         url: String,
-        /// Maximum video height, e.g. 360, 480, 720, 1080. Lower uses less data.
+        /// Maximum picture quality: 480 = SD, 720 = HD, 1080 = Full HD. Includes audio.
         #[arg(short, long, default_value_t = 720, value_parser = clap::value_parser!(u32).range(1..))]
         quality: u32,
         /// Download audio only, in this format
