@@ -77,3 +77,7 @@ cargo clippy --locked --all-targets -- -D warnings
 `src/main.rs` handles CLI arguments and terminal output. `src/engine.rs` builds subprocess commands and parses metadata/progress. This separation is sufficient for the current app; no web framework, database or async runtime is needed.
 
 The wrapper ignores global yt-dlp configuration so it cannot silently change download settings. Select a different executable using `ytd --yt-dlp /path/to/yt-dlp doctor` or `YTD_YT_DLP`.
+
+## Future ideas
+
+See [ROADMAP.md](ROADMAP.md) for the reminder to explore a Ratatui terminal interface.
